@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook Mercado Pago - Coralinefits</title>
+</head>
+<body>
+    <h1>Webhook Mercado Pago</h1>
+    <p>Este endpoint recebe notificações de pagamento do Mercado Pago.</p>
+    
+    <script>
+        // Este arquivo será usado como endpoint de webhook
+        // O Mercado Pago enviará notificações para este URL
+        
+        // Função para processar notificações
+        async function processNotification(data) {
+            try {
+                // Salvar notificação no localStorage para visualização no admin
+                const notifications = JSON.parse(localStorage.getItem('cf_mp_notifications') || '[]');
+                notifications.unshift({
+                    timestamp: new Date().toISOString(),
+                    data: data
+                });
+                
+                // Manter apenas as últimas 100 notificações
+                if (notifications.length > 100) {
+                    notifications.pop();
+                }
+                
+                localStorage.setItem('cf_mp_notifications', JSON.stringify(notifications));
+                
+                console.log('Notificação recebida:', data);
+                
+                // Se for uma notificação de pagamento aprovado
+                if (data.type === 'payment' && data.data && data.data.status === 'approved') {
+                    // Aqui você pode adicionar lógica adicional
+                    // como enviar email de confirmação, etc.
+                    console.log('Pagamento aprovado:', data.data.id);
+                }
+                
+                return { status: 'success' };
+            } catch (error) {
+                console.error('Erro ao processar notificação:', error);
+                return { status: 'error', message: error.message };
+            }
+        }
+        
+        // Escutar mensagens postMessage (para testes locais)
+        window.addEventListener('message', async (event) => {
+            if (event.data && event.data.type === 'mercadopago_webhook') {
+                await processNotification(event.data.data);
+            }
+        });
+        
+        // Para desenvolvimento: simular recebimento de webhook
+        if (window.location.search.includes('test=true')) {
+            const testData = {
+                type: 'payment',
+                data: {
+                    id: 'test_payment_' + Date.now(),
+                    status: 'approved',
+                    amount: 99.90
+                }
+            };
+            processNotification(testData);
+            console.log('Notificação de teste processada');
+        }
+    </script>
+</body>
+</html>
